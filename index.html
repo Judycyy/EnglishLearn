@@ -36,7 +36,7 @@
         <h1>把项目里的英文术语变成可浏览、可搜索、可朗读的学习卡片</h1>
         <p>
           这份词库整理了 KnowForge RAG Platform 中高频出现的英文单词、缩写、框架名、工程概念和业务术语。
-          点击「真人朗读」可以播放词典真人音频，卡片会自动加载美式 IPA；点击「收藏」可以把重点词保存到浏览器本地。
+          点击「真人朗读」可以播放词典真人音频，卡片会自动加载音标；点击「收藏」可以把重点词保存到浏览器本地。
         </p>
       </div>
       <div class="stats-wrap">
@@ -67,7 +67,7 @@
 
     <section class="result-head">
       <strong id="resultCount">0 个词条</strong>
-      <span>读音优先来自免费词典；Merriam-Webster 仅在缺少 IPA 或真人音频时兜底，减少 key 请求次数。</span>
+      <span>页面先加载免费音标/音频；点击时缺真人音频才查 Merriam-Webster，仍失败则用浏览器美式合成兜底。</span>
     </section>
 
     <section id="wordGrid" class="word-grid" aria-live="polite"></section>
