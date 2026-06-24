@@ -259,7 +259,7 @@ const DATAMUSE_API = "https://api.datamuse.com/words";
 const MW_COLLEGIATE_API = "https://www.dictionaryapi.com/api/v3/references/collegiate/json/";
 const MW_CONFIG = window.ENGLISH_LEARN_CONFIG || {};
 const MW_API_KEY = String(MW_CONFIG.merriamWebsterKey || "").trim();
-const PRONUNCIATION_CACHE_KEY = "knowforge-pronunciation-cache-mw-first-v1";
+const PRONUNCIATION_CACHE_KEY = "knowforge-pronunciation-cache-strict-fixed-v1";
 const pronunciationCache = new Map(Object.entries(JSON.parse(localStorage.getItem(PRONUNCIATION_CACHE_KEY) || "{}")));
 let activeAudio = null;
 
@@ -286,14 +286,15 @@ const LOCAL_PRONUNCIATIONS = {
   fastapi: { ipa: "/fæst eɪ piː aɪ/", audio: "", source: "local", speak: "fast A P I" },
   api: { ipa: "/eɪ piː aɪ/", audio: "", source: "local", speak: "A P I" },
   http: { ipa: "/eɪtʃ tiː tiː piː/", audio: "", source: "local", speak: "H T T P" },
-  cors: { ipa: "/kɔːrz/", audio: "", source: "local", speak: "cors" },
+  cors: { ipa: "/kɔːrz/", audio: "", source: "local", speak: "course" },
   sessionid: { ipa: "/ˈseʃən aɪ diː/", audio: "", source: "local", speak: "session I D" },
   uuid: { ipa: "/juː juː aɪ diː/", audio: "", source: "local", speak: "U U I D" },
+  async: { ipa: "/eɪ sɪŋk/", audio: "", source: "local", speak: "a sink" },
   llm: { ipa: "/el el em/", audio: "", source: "local", speak: "L L M" },
   chatopenai: { ipa: "/tʃæt ˈoʊpən eɪ aɪ/", audio: "", source: "local", speak: "chat open A I" },
   openaicompatible: { ipa: "/ˈoʊpən eɪ aɪ kəmˈpætəbəl/", audio: "", source: "local", speak: "open A I compatible" },
   graphrag: { ipa: "/ɡræf ræɡ/", audio: "", source: "local", speak: "graph rag" },
-  mysql: { ipa: "/maɪ es kjuː el/", audio: "", source: "local", speak: "my S Q L" },
+  mysql: { ipa: "/maɪ ˈsiːkwəl/", audio: "", source: "local", speak: "my sequel" },
   csv: { ipa: "/siː es viː/", audio: "", source: "local", speak: "C S V" },
   xlsx: { ipa: "/eks el es eks/", audio: "", source: "local", speak: "X L S X" },
   docx: { ipa: "/diː oʊ siː eks/", audio: "", source: "local", speak: "D O C X" },
@@ -301,18 +302,41 @@ const LOCAL_PRONUNCIATIONS = {
   pdf: { ipa: "/piː diː ef/", audio: "", source: "local", speak: "P D F" },
   ocr: { ipa: "/oʊ siː ɑːr/", audio: "", source: "local", speak: "O C R" },
   paddleocr: { ipa: "/ˈpædəl oʊ siː ɑːr/", audio: "", source: "local", speak: "paddle O C R" },
-  pymupdf: { ipa: "/paɪ mjuː piː diː ef/", audio: "", source: "local", speak: "pie mu P D F" },
+  pymupdf: { ipa: "/paɪ mjuː piː diː ef/", audio: "", source: "local", speak: "pie mew P D F" },
   sha256: { ipa: "/es eɪtʃ eɪ tuː ˈfɪfti sɪks/", audio: "", source: "local", speak: "S H A two fifty six" },
   kbversion: { ipa: "/keɪ biː ˈvɝːʒən/", audio: "", source: "local", speak: "K B version" },
-  datasetid: { ipa: "/ˈdeɪtəset aɪ diː/", audio: "", source: "local", speak: "dataset I D" },
+  datasetid: { ipa: "/ˈdeɪtəset aɪ diː/", audio: "", source: "local", speak: "day ta set I D" },
   cli: { ipa: "/siː el aɪ/", audio: "", source: "local", speak: "C L I" },
   html: { ipa: "/eɪtʃ tiː em el/", audio: "", source: "local", speak: "H T M L" },
   css: { ipa: "/siː es es/", audio: "", source: "local", speak: "C S S" },
   dom: { ipa: "/diː oʊ em/", audio: "", source: "local", speak: "D O M" },
-  milvus: { ipa: "/ˈmɪlvəs/", audio: "", source: "local" },
-  langchain: { ipa: "/læŋ tʃeɪn/", audio: "", source: "local" },
-  langsmith: { ipa: "/læŋ smɪθ/", audio: "", source: "local" },
-  langgraph: { ipa: "/læŋ ɡræf/", audio: "", source: "local" },
+  booleanexpr: { ipa: "/ˈbuːliən ɪkˈspreʃən/", audio: "", source: "local", speak: "boolean expression" },
+  bidding: { ipa: "/ˈbɪdɪŋ/", audio: "", source: "local", speak: "bidding" },
+  chunking: { ipa: "/ˈtʃʌŋkɪŋ/", audio: "", source: "local", speak: "chunking" },
+  cleanoverlay: { ipa: "/kliːn ˈoʊvərleɪ/", audio: "", source: "local", speak: "clean overlay" },
+  crossencoder: { ipa: "/krɔːs enˈkoʊdər/", audio: "", source: "local", speak: "cross encoder" },
+  dataisolation: { ipa: "/ˈdeɪtə ˌaɪsəˈleɪʃən/", audio: "", source: "local", speak: "day ta isolation" },
+  datascope: { ipa: "/ˈdeɪtə skoʊp/", audio: "", source: "local", speak: "day ta scope" },
+  dataclass: { ipa: "/ˈdeɪtə klæs/", audio: "", source: "local", speak: "day ta class" },
+  dirtysamples: { ipa: "/ˈdɝːti ˈsæmpəlz/", audio: "", source: "local", speak: "dirty samples" },
+  duediligence: { ipa: "/duː ˈdɪlɪdʒəns/", audio: "", source: "local", speak: "due diligence" },
+  evalset: { ipa: "/ɪˈvæljuˌeɪʃən set/", audio: "", source: "local", speak: "evaluation set" },
+  incoterms: { ipa: "/ˈɪŋkoʊ tɝːmz/", audio: "", source: "local", speak: "inco terms" },
+  insufficientcontext: { ipa: "/ˌɪnsəˈfɪʃənt ˈkɑːntekst/", audio: "", source: "local", speak: "insufficient context" },
+  loader: { ipa: "/ˈloʊdər/", audio: "", source: "local", speak: "loader" },
+  middleware: { ipa: "/ˈmɪdəlwer/", audio: "", source: "local", speak: "middle ware" },
+  milvus: { ipa: "/ˈmɪlvəs/", audio: "", source: "local", speak: "mill vuss" },
+  negativesample: { ipa: "/ˈneɡətɪv ˈsæmpəl/", audio: "", source: "local", speak: "negative sample" },
+  queryvariants: { ipa: "/ˈkwɪri ˈveriənts/", audio: "", source: "local", speak: "query variants" },
+  refactor: { ipa: "/riːˈfæktər/", audio: "", source: "local", speak: "ree factor" },
+  rerank: { ipa: "/riːˈræŋk/", audio: "", source: "local", speak: "ree rank" },
+  reranker: { ipa: "/riːˈræŋkər/", audio: "", source: "local", speak: "ree ranker" },
+  speechsynthesis: { ipa: "/spiːtʃ ˈsɪnθəsɪs/", audio: "", source: "local", speak: "speech synthesis" },
+  uvicorn: { ipa: "/ˈjuːvɪkɔːrn/", audio: "", source: "local", speak: "you vick orn" },
+  versioning: { ipa: "/ˈvɝːʒənɪŋ/", audio: "", source: "local", speak: "versioning" },
+  langchain: { ipa: "/læŋ tʃeɪn/", audio: "", source: "local", speak: "langue chain" },
+  langsmith: { ipa: "/læŋ smɪθ/", audio: "", source: "local", speak: "langue smith" },
+  langgraph: { ipa: "/læŋ ɡræf/", audio: "", source: "local", speak: "langue graph" },
   pydantic: { ipa: "/paɪˈdæntɪk/", audio: "", source: "local" },
   pymilvus: { ipa: "/paɪ ˈmɪlvəs/", audio: "", source: "local" },
   dashscope: { ipa: "/dæʃ skoʊp/", audio: "", source: "local" },
@@ -330,7 +354,7 @@ function localPronunciation(token) {
 function localWordPronunciation(word) {
   const candidates = [word.term, word.say].map(pronunciationKey).filter(Boolean);
   const found = candidates.map((key) => LOCAL_PRONUNCIATIONS[key]).find(Boolean);
-  return found ? { ...found, localFixed: true, speak: found.speak || word.say || word.term } : null;
+  return found ? { ...found, found: true, localFixed: true, speak: found.speak || word.say || word.term } : null;
 }
 
 
@@ -360,15 +384,22 @@ function lookupTokens(word) {
   return [...new Set(tokens)].slice(0, 5);
 }
 
-function selectDictionaryEntry(entries) {
-  const phonetics = entries.flatMap((entry) => entry.phonetics || []);
+function isSameLookupWord(expected, actual) {
+  return pronunciationKey(expected) === pronunciationKey(actual);
+}
+
+function selectDictionaryEntry(entries, token) {
+  const exactEntries = entries.filter((entry) => isSameLookupWord(token, entry.word));
+  if (!exactEntries.length) return { ipa: "", audio: "", missing: true, source: "dictionaryapi-dev-mismatch" };
+  const phonetics = exactEntries.flatMap((entry) => entry.phonetics || []);
   const audioCandidates = phonetics.filter((item) => item.audio);
   const preferredAudio = audioCandidates.find((item) => /(?:^|[-_])us(?:[-_]|\.)|en-us/i.test(item.audio)) || audioCandidates[0];
   const textCandidates = phonetics.filter((item) => item.text);
-  const preferredText = preferredAudio?.text || textCandidates[0]?.text || entries.find((entry) => entry.phonetic)?.phonetic || "";
+  const preferredText = preferredAudio?.text || textCandidates[0]?.text || exactEntries.find((entry) => entry.phonetic)?.phonetic || "";
   return {
     ipa: cleanIpa(preferredText),
     audio: audioUrl(preferredAudio?.audio),
+    found: Boolean(preferredText || preferredAudio?.audio),
   };
 }
 
@@ -397,6 +428,7 @@ function selectMerriamWebsterEntry(entries) {
   return {
     ipa: cleanIpa(preferred.ipa || preferred.mw),
     audio: merriamAudioUrl(preferred.sound?.audio),
+    found: Boolean(preferred.ipa || preferred.mw || preferred.sound?.audio),
     source: "merriam-webster-collegiate",
   };
 }
@@ -465,9 +497,9 @@ async function fetchFreeTokenPronunciation(token) {
 
   const local = localPronunciation(token);
   if (local) {
-    pronunciationCache.set(cacheKey, local);
+    pronunciationCache.set(cacheKey, { ...local, found: true });
     savePronunciationCache();
-    return local;
+    return { ...local, found: true };
   }
 
   let result = { ipa: "", audio: "", missing: true, source: "none" };
@@ -475,7 +507,7 @@ async function fetchFreeTokenPronunciation(token) {
     const response = await fetch(`${DICTIONARY_API}${encodeURIComponent(token)}`);
     if (!response.ok) throw new Error(`dictionary status ${response.status}`);
     const entries = await response.json();
-    result = selectDictionaryEntry(Array.isArray(entries) ? entries : []);
+    result = selectDictionaryEntry(Array.isArray(entries) ? entries : [], token);
     result.source = "dictionaryapi-dev";
   } catch (error) {
     result = { ipa: "", audio: "", missing: true, source: "dictionaryapi-dev-miss" };
@@ -483,7 +515,10 @@ async function fetchFreeTokenPronunciation(token) {
 
   if (!result.ipa) {
     result.ipa = await fetchDatamuseIpa(token);
-    if (result.ipa && result.source === "dictionaryapi-dev-miss") result.source = "datamuse";
+    if (result.ipa && result.source === "dictionaryapi-dev-miss") {
+      result.source = "datamuse";
+      result.found = true;
+    }
   }
 
   result.missing = !(result.ipa || result.audio);
@@ -498,14 +533,15 @@ async function fetchTokenPronunciation(token) {
 
   const local = localPronunciation(token);
   if (local) {
-    pronunciationCache.set(cacheKey, local);
+    pronunciationCache.set(cacheKey, { ...local, found: true });
     savePronunciationCache();
-    return local;
+    return { ...local, found: true };
   }
 
   let result = await fetchMerriamWebsterPronunciation(token);
   if (!(result.ipa || result.audio)) result = await fetchFreeTokenPronunciation(token);
   result.missing = !(result.ipa || result.audio);
+  result.found = Boolean(result.found || result.ipa || result.audio);
   pronunciationCache.set(cacheKey, result);
   savePronunciationCache();
   return result;
@@ -524,11 +560,25 @@ function buildPronunciation(results) {
   const ipa = [...new Set(results.map((item) => item.ipa).filter(Boolean))].join(" ");
   const audioUrls = [...new Set(results.map((item) => item.audio).filter(Boolean))];
   const errors = [...new Set(results.map((item) => item.error).filter(Boolean))];
+  const foundCount = results.filter((item) => item.found || item.ipa || item.audio).length;
   return {
     ipa,
     audioUrls,
     errors,
+    foundCount,
     status: audioUrls.length ? "ready" : ipa ? "ipa-only" : "missing",
+  };
+}
+
+function fixedSyntheticPronunciation(word, ipa = "") {
+  return {
+    ipa,
+    audioUrls: [],
+    errors: [],
+    foundCount: 1,
+    status: ipa ? "ipa-only" : "missing",
+    localFixed: true,
+    speakText: word.say || word.term,
   };
 }
 
@@ -544,7 +594,13 @@ async function loadPronunciation(word) {
   }
   const tokens = lookupTokens(word);
   const results = await Promise.all(tokens.map(fetchTokenPronunciation));
-  word.pronunciation = buildPronunciation(results);
+  const built = buildPronunciation(results);
+  if (tokens.length > 1 && built.foundCount < tokens.length) {
+    word.pronunciation = fixedSyntheticPronunciation(word, built.ipa);
+    word.pronunciation.tokens = tokens;
+    return word.pronunciation;
+  }
+  word.pronunciation = built;
   word.pronunciation.tokens = tokens;
   return word.pronunciation;
 }
@@ -571,7 +627,7 @@ function updatePronunciationCard(card, pronunciation) {
   if (ipaValue) ipaValue.textContent = pronunciation.ipa || "暂无音标";
   if (audioStatus) {
     audioStatus.classList.remove("ready", "loading", "synth", "missing");
-    audioStatus.textContent = pronunciation.audioUrls.length ? "真人音频已就绪" : pronunciation.localFixed ? "本地固定读法已就绪" : pronunciation.ipa ? "音标已就绪，点听时播放；无音频则合成兜底" : "MW/免费源暂未查到，点听时合成兜底";
+    audioStatus.textContent = pronunciation.audioUrls.length ? "真人音频已就绪" : pronunciation.localFixed ? "固定读法已就绪" : pronunciation.ipa ? "音标已就绪，点听时播放；无音频则合成兜底" : "MW/免费源暂未查到，点听时合成兜底";
     audioStatus.classList.toggle("ready", Boolean(pronunciation.audioUrls.length));
     audioStatus.classList.toggle("missing", !pronunciation.audioUrls.length && !pronunciation.ipa);
   }
@@ -579,7 +635,7 @@ function updatePronunciationCard(card, pronunciation) {
     speakButton.disabled = false;
     speakButton.classList.toggle("needs-fallback", !pronunciation.audioUrls.length);
     speakButton.textContent = pronunciation.audioUrls.length ? "听" : pronunciation.localFixed ? "读" : "补";
-    speakButton.title = pronunciation.audioUrls.length ? "播放真人朗读" : pronunciation.localFixed ? "按本地固定读法朗读" : "播放音频；没有音频则浏览器合成";
+    speakButton.title = pronunciation.audioUrls.length ? "播放真人朗读" : pronunciation.localFixed ? "按固定读法朗读" : "播放音频；没有音频则浏览器合成";
   }
 }
 
@@ -651,7 +707,7 @@ function speakWithBrowserSynthesis(word) {
 async function playAudioSequence(urls) {
   for (const url of urls) {
     await playAudio(url);
-    await new Promise((resolve) => window.setTimeout(resolve, 120));
+    await new Promise((resolve) => window.setTimeout(resolve, 35));
   }
 }
 
@@ -753,10 +809,10 @@ async function speak(word, button = null) {
 
     if (!pronunciation.audioUrls.length) {
       if (pronunciation.localFixed) {
-        setPronunciationStatus(card, "正在按本地固定读法朗读...", "loading");
+        setPronunciationStatus(card, "正在按固定读法朗读...", "loading");
         if (button) button.textContent = "读...";
         await speakWithBrowserSynthesis({ ...word, speakText: pronunciation.speakText });
-        setPronunciationStatus(card, "已按本地固定读法朗读", "synth");
+        setPronunciationStatus(card, "已按固定读法朗读", "synth");
         return;
       }
       setPronunciationStatus(card, "没有可播放真人音频，正在用浏览器合成...", "loading");
