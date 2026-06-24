@@ -259,7 +259,7 @@ const DATAMUSE_API = "https://api.datamuse.com/words";
 const MW_COLLEGIATE_API = "https://www.dictionaryapi.com/api/v3/references/collegiate/json/";
 const MW_CONFIG = window.ENGLISH_LEARN_CONFIG || {};
 const MW_API_KEY = String(MW_CONFIG.merriamWebsterKey || "").trim();
-const PRONUNCIATION_CACHE_KEY = "knowforge-pronunciation-cache-github-pages-synth-fallback-v2";
+const PRONUNCIATION_CACHE_KEY = "knowforge-pronunciation-cache-mw-first-v1";
 const pronunciationCache = new Map(Object.entries(JSON.parse(localStorage.getItem(PRONUNCIATION_CACHE_KEY) || "{}")));
 let activeAudio = null;
 
@@ -458,8 +458,9 @@ async function fetchDatamuseIpa(token) {
     return "";
   }
 }
-async function fetchTokenPronunciation(token) {
-  const cacheKey = `light:${token}`;
+
+async function fetchFreeTokenPronunciation(token) {
+  const cacheKey = `free:${token}`;
   if (pronunciationCache.has(cacheKey)) return pronunciationCache.get(cacheKey);
 
   const local = localPronunciation(token);
@@ -485,6 +486,25 @@ async function fetchTokenPronunciation(token) {
     if (result.ipa && result.source === "dictionaryapi-dev-miss") result.source = "datamuse";
   }
 
+  result.missing = !(result.ipa || result.audio);
+  pronunciationCache.set(cacheKey, result);
+  savePronunciationCache();
+  return result;
+}
+
+async function fetchTokenPronunciation(token) {
+  const cacheKey = `primary:${token}`;
+  if (pronunciationCache.has(cacheKey)) return pronunciationCache.get(cacheKey);
+
+  const local = localPronunciation(token);
+  if (local) {
+    pronunciationCache.set(cacheKey, local);
+    savePronunciationCache();
+    return local;
+  }
+
+  let result = await fetchMerriamWebsterPronunciation(token);
+  if (!(result.ipa || result.audio)) result = await fetchFreeTokenPronunciation(token);
   result.missing = !(result.ipa || result.audio);
   pronunciationCache.set(cacheKey, result);
   savePronunciationCache();
@@ -536,7 +556,8 @@ async function loadMerriamFallbackAudio(word) {
 
   const tokens = current.tokens || lookupTokens(word);
   const mwResults = await Promise.all(tokens.map(fetchTokenMerriamFallback));
-  const merged = buildPronunciation([...tokens.map((token) => pronunciationCache.get(`light:${token}`) || {}), ...mwResults]);
+  const freeResults = await Promise.all(tokens.map(fetchFreeTokenPronunciation));
+  const merged = buildPronunciation([...mwResults, ...freeResults]);
   merged.tokens = tokens;
   word.pronunciation = merged;
   return merged;
@@ -550,7 +571,7 @@ function updatePronunciationCard(card, pronunciation) {
   if (ipaValue) ipaValue.textContent = pronunciation.ipa || "暂无音标";
   if (audioStatus) {
     audioStatus.classList.remove("ready", "loading", "synth", "missing");
-    audioStatus.textContent = pronunciation.audioUrls.length ? "免费真人音频已就绪" : pronunciation.localFixed ? "本地固定读法已就绪" : pronunciation.ipa ? "音标已就绪，点听时先查 MW，失败后浏览器合成" : "点听时查 MW，失败后浏览器合成";
+    audioStatus.textContent = pronunciation.audioUrls.length ? "真人音频已就绪" : pronunciation.localFixed ? "本地固定读法已就绪" : pronunciation.ipa ? "音标已就绪，点听时播放；无音频则合成兜底" : "MW/免费源暂未查到，点听时合成兜底";
     audioStatus.classList.toggle("ready", Boolean(pronunciation.audioUrls.length));
     audioStatus.classList.toggle("missing", !pronunciation.audioUrls.length && !pronunciation.ipa);
   }
@@ -558,7 +579,7 @@ function updatePronunciationCard(card, pronunciation) {
     speakButton.disabled = false;
     speakButton.classList.toggle("needs-fallback", !pronunciation.audioUrls.length);
     speakButton.textContent = pronunciation.audioUrls.length ? "听" : pronunciation.localFixed ? "读" : "补";
-    speakButton.title = pronunciation.audioUrls.length ? "播放免费真人朗读" : pronunciation.localFixed ? "按本地固定读法朗读" : "点击后用 Merriam-Webster 查音频，失败后浏览器合成";
+    speakButton.title = pronunciation.audioUrls.length ? "播放真人朗读" : pronunciation.localFixed ? "按本地固定读法朗读" : "播放音频；没有音频则浏览器合成";
   }
 }
 
@@ -738,24 +759,15 @@ async function speak(word, button = null) {
         setPronunciationStatus(card, "已按本地固定读法朗读", "synth");
         return;
       }
-      const canUseMerriamWebster = hasMerriamWebsterKey();
-      setPronunciationStatus(
-        card,
-        canUseMerriamWebster ? "正在用 Merriam-Webster 查真人音频..." : "未配置 Merriam-Webster key，正在用浏览器合成...",
-        "loading"
-      );
-      if (button) button.textContent = canUseMerriamWebster ? "查..." : "合...";
-      if (canUseMerriamWebster) {
-        pronunciation = await loadMerriamFallbackAudio(word);
-        updatePronunciationCard(card, pronunciation);
-      }
+      setPronunciationStatus(card, "没有可播放真人音频，正在用浏览器合成...", "loading");
+      if (button) button.textContent = "合...";
     }
 
     if (pronunciation.audioUrls.length) {
       await playAudioSequence(pronunciation.audioUrls);
       setPronunciationStatus(card, "真人音频已播放", "ready");
     } else {
-      setPronunciationStatus(card, hasMerriamWebsterKey() ? "Merriam-Webster 没查到，正在用浏览器合成..." : "正在用浏览器合成...", "loading");
+      setPronunciationStatus(card, "正在用浏览器合成...", "loading");
       if (button) button.textContent = "合...";
       await speakWithBrowserSynthesis(word);
       setPronunciationStatus(card, "已使用浏览器合成兜底", "synth");
