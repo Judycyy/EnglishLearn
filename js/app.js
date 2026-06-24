@@ -1,4 +1,4 @@
-const WORDS = [
+﻿const WORDS = [
   ["RAG", "rag, retrieval augmented generation", "RAG 主链路", "检索增强生成", "先从知识库检索相关资料，再把资料交给大模型生成答案的架构。", "项目核心能力是多场景 RAG 问答。"],
   ["Retrieval", "retrieval", "RAG 主链路", "检索；召回", "从 FAQ 或文档集合中找出与用户问题最相关的候选内容。", "retrieval 阶段会考虑 source、kb_version 和权限。"],
   ["Augmented", "augmented", "RAG 主链路", "增强的", "表示模型回答被外部知识库资料增强，而不是只靠模型记忆。", "Retrieval Augmented Generation 中的 augmented 指引入检索证据。"],
@@ -256,11 +256,86 @@ const WORDS = [
 
 const DICTIONARY_API = "https://api.dictionaryapi.dev/api/v2/entries/en/";
 const DATAMUSE_API = "https://api.datamuse.com/words";
-const pronunciationCache = new Map(Object.entries(JSON.parse(localStorage.getItem("knowforge-pronunciation-cache-github-pages-mw-fallback-v1") || "{}")));
+const MW_COLLEGIATE_API = "https://www.dictionaryapi.com/api/v3/references/collegiate/json/";
+const MW_CONFIG = window.ENGLISH_LEARN_CONFIG || {};
+const MW_API_KEY = String(MW_CONFIG.merriamWebsterKey || "").trim();
+const PRONUNCIATION_CACHE_KEY = "knowforge-pronunciation-cache-github-pages-synth-fallback-v2";
+const pronunciationCache = new Map(Object.entries(JSON.parse(localStorage.getItem(PRONUNCIATION_CACHE_KEY) || "{}")));
 let activeAudio = null;
 
+const LOCAL_PRONUNCIATIONS = {
+  rag: { ipa: "/ræɡ/", audio: "", source: "local", speak: "rag" },
+  ragquerycontext: { ipa: "/ræɡ ˈkwɪri ˈkɑːntekst/", audio: "", source: "local", speak: "rag query context" },
+  qaservice: { ipa: "/kjuː eɪ ˈsɝːvɪs/", audio: "", source: "local", speak: "Q A service" },
+  faq: { ipa: "/ef eɪ kjuː/", audio: "", source: "local", speak: "F A Q" },
+  faqdirect: { ipa: "/ef eɪ kjuː dəˈrekt/", audio: "", source: "local", speak: "F A Q direct" },
+  documentqa: { ipa: "/ˈdɑːkjumənt kjuː eɪ/", audio: "", source: "local", speak: "document Q A" },
+  scenarioid: { ipa: "/səˈnærioʊ aɪ diː/", audio: "", source: "local", speak: "scenario I D" },
+  complianceqa: { ipa: "/kəmˈplaɪəns kjuː eɪ/", audio: "", source: "local", speak: "compliance Q A" },
+  engineeringprojectqa: { ipa: "/ˌendʒəˈnɪrɪŋ ˈprɑːdʒekt kjuː eɪ/", audio: "", source: "local", speak: "engineering project Q A" },
+  hr: { ipa: "/eɪtʃ ɑːr/", audio: "", source: "local", speak: "H R" },
+  it: { ipa: "/aɪ tiː/", audio: "", source: "local", speak: "I T" },
+  hscode: { ipa: "/eɪtʃ es koʊd/", audio: "", source: "local", speak: "H S code" },
+  bgem3: { ipa: "/biː dʒiː iː em θriː/", audio: "", source: "local", speak: "B G E M three" },
+  bge: { ipa: "/biː dʒiː iː/", audio: "", source: "local" },
+  bm25: { ipa: "/biː em ˈtwenti faɪv/", audio: "", source: "local", speak: "B M twenty five" },
+  hnsw: { ipa: "/eɪtʃ en es ˈdʌbəljuː/", audio: "", source: "local", speak: "H N S W" },
+  topk: { ipa: "/tɑːp keɪ/", audio: "", source: "local", speak: "top K" },
+  recallk: { ipa: "/rɪˈkɔːl æt keɪ/", audio: "", source: "local", speak: "recall at K" },
+  mrr: { ipa: "/em ɑːr ɑːr/", audio: "", source: "local", speak: "M R R" },
+  fastapi: { ipa: "/fæst eɪ piː aɪ/", audio: "", source: "local", speak: "fast A P I" },
+  api: { ipa: "/eɪ piː aɪ/", audio: "", source: "local", speak: "A P I" },
+  http: { ipa: "/eɪtʃ tiː tiː piː/", audio: "", source: "local", speak: "H T T P" },
+  cors: { ipa: "/kɔːrz/", audio: "", source: "local", speak: "cors" },
+  sessionid: { ipa: "/ˈseʃən aɪ diː/", audio: "", source: "local", speak: "session I D" },
+  uuid: { ipa: "/juː juː aɪ diː/", audio: "", source: "local", speak: "U U I D" },
+  llm: { ipa: "/el el em/", audio: "", source: "local", speak: "L L M" },
+  chatopenai: { ipa: "/tʃæt ˈoʊpən eɪ aɪ/", audio: "", source: "local", speak: "chat open A I" },
+  openaicompatible: { ipa: "/ˈoʊpən eɪ aɪ kəmˈpætəbəl/", audio: "", source: "local", speak: "open A I compatible" },
+  graphrag: { ipa: "/ɡræf ræɡ/", audio: "", source: "local", speak: "graph rag" },
+  mysql: { ipa: "/maɪ es kjuː el/", audio: "", source: "local", speak: "my S Q L" },
+  csv: { ipa: "/siː es viː/", audio: "", source: "local", speak: "C S V" },
+  xlsx: { ipa: "/eks el es eks/", audio: "", source: "local", speak: "X L S X" },
+  docx: { ipa: "/diː oʊ siː eks/", audio: "", source: "local", speak: "D O C X" },
+  pptx: { ipa: "/piː piː tiː eks/", audio: "", source: "local", speak: "P P T X" },
+  pdf: { ipa: "/piː diː ef/", audio: "", source: "local", speak: "P D F" },
+  ocr: { ipa: "/oʊ siː ɑːr/", audio: "", source: "local", speak: "O C R" },
+  paddleocr: { ipa: "/ˈpædəl oʊ siː ɑːr/", audio: "", source: "local", speak: "paddle O C R" },
+  pymupdf: { ipa: "/paɪ mjuː piː diː ef/", audio: "", source: "local", speak: "pie mu P D F" },
+  sha256: { ipa: "/es eɪtʃ eɪ tuː ˈfɪfti sɪks/", audio: "", source: "local", speak: "S H A two fifty six" },
+  kbversion: { ipa: "/keɪ biː ˈvɝːʒən/", audio: "", source: "local", speak: "K B version" },
+  datasetid: { ipa: "/ˈdeɪtəset aɪ diː/", audio: "", source: "local", speak: "dataset I D" },
+  cli: { ipa: "/siː el aɪ/", audio: "", source: "local", speak: "C L I" },
+  html: { ipa: "/eɪtʃ tiː em el/", audio: "", source: "local", speak: "H T M L" },
+  css: { ipa: "/siː es es/", audio: "", source: "local", speak: "C S S" },
+  dom: { ipa: "/diː oʊ em/", audio: "", source: "local", speak: "D O M" },
+  milvus: { ipa: "/ˈmɪlvəs/", audio: "", source: "local" },
+  langchain: { ipa: "/læŋ tʃeɪn/", audio: "", source: "local" },
+  langsmith: { ipa: "/læŋ smɪθ/", audio: "", source: "local" },
+  langgraph: { ipa: "/læŋ ɡræf/", audio: "", source: "local" },
+  pydantic: { ipa: "/paɪˈdæntɪk/", audio: "", source: "local" },
+  pymilvus: { ipa: "/paɪ ˈmɪlvəs/", audio: "", source: "local" },
+  dashscope: { ipa: "/dæʃ skoʊp/", audio: "", source: "local" },
+  datamuse: { ipa: "/ˈdeɪtə mjuːz/", audio: "", source: "local" },
+};
+
+function pronunciationKey(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function localPronunciation(token) {
+  return LOCAL_PRONUNCIATIONS[pronunciationKey(token)] || null;
+}
+
+function localWordPronunciation(word) {
+  const candidates = [word.term, word.say].map(pronunciationKey).filter(Boolean);
+  const found = candidates.map((key) => LOCAL_PRONUNCIATIONS[key]).find(Boolean);
+  return found ? { ...found, localFixed: true, speak: found.speak || word.say || word.term } : null;
+}
+
+
 function savePronunciationCache() {
-  localStorage.setItem("knowforge-pronunciation-cache-github-pages-mw-fallback-v1", JSON.stringify(Object.fromEntries(pronunciationCache)));
+  localStorage.setItem(PRONUNCIATION_CACHE_KEY, JSON.stringify(Object.fromEntries(pronunciationCache)));
 }
 
 function cleanIpa(text) {
@@ -304,7 +379,7 @@ function hasMerriamWebsterKey() {
 function merriamAudioDirectory(audio) {
   if (/^bix/i.test(audio)) return "bix";
   if (/^gg/i.test(audio)) return "gg";
-  if (/^[0-9]/.test(audio)) return "number";
+  if (/^[^a-z]/i.test(audio)) return "number";
   return audio.charAt(0);
 }
 
@@ -333,14 +408,44 @@ async function fetchMerriamWebsterPronunciation(token) {
     if (!response.ok) throw new Error(`mw status ${response.status}`);
     return selectMerriamWebsterEntry(await response.json());
   } catch (error) {
-    return { ipa: "", audio: "", missing: true };
+    return { ipa: "", audio: "", missing: true, error: error.message || "mw request failed" };
   }
 }
+
+const ARPABET_TO_IPA = {
+  AA: "ɑ", AE: "æ", AH: "ə", AO: "ɔ", AW: "aʊ", AY: "aɪ",
+  B: "b", CH: "tʃ", D: "d", DH: "ð", EH: "ɛ", ER: "ɚ", EY: "eɪ",
+  F: "f", G: "ɡ", HH: "h", IH: "ɪ", IY: "i", JH: "dʒ", K: "k",
+  L: "l", M: "m", N: "n", NG: "ŋ", OW: "oʊ", OY: "ɔɪ", P: "p",
+  R: "r", S: "s", SH: "ʃ", T: "t", TH: "θ", UH: "ʊ", UW: "u",
+  V: "v", W: "w", Y: "j", Z: "z", ZH: "ʒ",
+};
+
+function arpabetToIpa(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const tokens = raw.split(/\s+/).filter(Boolean);
+  if (!tokens.length || !tokens.every((token) => /^[A-Z]+[0-2]?$/.test(token))) return "";
+
+  const pieces = [];
+  for (const token of tokens) {
+    const match = token.match(/^([A-Z]+)([0-2])?$/);
+    const ipa = ARPABET_TO_IPA[match?.[1]];
+    if (!ipa) return "";
+    const stress = match[2] === "1" ? "ˈ" : match[2] === "2" ? "ˌ" : "";
+    pieces.push(`${stress}${ipa}`);
+  }
+  return `/${pieces.join(" ")}/`;
+}
+
 function parseDatamuseIpa(items) {
   const first = Array.isArray(items) ? items[0] : null;
   const tags = first?.tags || [];
   const pron = tags.find((tag) => String(tag).startsWith("pron:"));
-  return cleanIpa(pron ? pron.slice(5) : "");
+  const rawPronunciation = pron ? pron.slice(5).trim() : "";
+  const converted = arpabetToIpa(rawPronunciation);
+  if (converted) return converted;
+  return /^[A-Z\s0-2]+$/.test(rawPronunciation) ? "" : cleanIpa(rawPronunciation);
 }
 
 async function fetchDatamuseIpa(token) {
@@ -354,7 +459,15 @@ async function fetchDatamuseIpa(token) {
   }
 }
 async function fetchTokenPronunciation(token) {
-  if (pronunciationCache.has(token)) return pronunciationCache.get(token);
+  const cacheKey = `light:${token}`;
+  if (pronunciationCache.has(cacheKey)) return pronunciationCache.get(cacheKey);
+
+  const local = localPronunciation(token);
+  if (local) {
+    pronunciationCache.set(cacheKey, local);
+    savePronunciationCache();
+    return local;
+  }
 
   let result = { ipa: "", audio: "", missing: true, source: "none" };
   try {
@@ -372,34 +485,61 @@ async function fetchTokenPronunciation(token) {
     if (result.ipa && result.source === "dictionaryapi-dev-miss") result.source = "datamuse";
   }
 
-  // Merriam-Webster uses a personal API key, so keep it as the final fallback.
-  if (!result.audio || !result.ipa) {
-    const mwResult = await fetchMerriamWebsterPronunciation(token);
-    result = {
-      ipa: result.ipa || mwResult.ipa,
-      audio: result.audio || mwResult.audio,
-      source: mwResult.audio || mwResult.ipa ? `fallback:${mwResult.source || "merriam-webster"}` : result.source,
-      missing: !(result.ipa || result.audio || mwResult.ipa || mwResult.audio),
-    };
-  }
-
-  pronunciationCache.set(token, result);
+  result.missing = !(result.ipa || result.audio);
+  pronunciationCache.set(cacheKey, result);
   savePronunciationCache();
   return result;
 }
 
-async function loadPronunciation(word) {
-  if (word.pronunciation) return word.pronunciation;
-  const tokens = lookupTokens(word);
-  const results = await Promise.all(tokens.map(fetchTokenPronunciation));
+async function fetchTokenMerriamFallback(token) {
+  const cacheKey = `mw:${token}`;
+  if (pronunciationCache.has(cacheKey)) return pronunciationCache.get(cacheKey);
+  const result = await fetchMerriamWebsterPronunciation(token);
+  pronunciationCache.set(cacheKey, result);
+  savePronunciationCache();
+  return result;
+}
+
+function buildPronunciation(results) {
   const ipa = [...new Set(results.map((item) => item.ipa).filter(Boolean))].join(" ");
   const audioUrls = [...new Set(results.map((item) => item.audio).filter(Boolean))];
-  word.pronunciation = {
+  const errors = [...new Set(results.map((item) => item.error).filter(Boolean))];
+  return {
     ipa,
     audioUrls,
+    errors,
     status: audioUrls.length ? "ready" : ipa ? "ipa-only" : "missing",
   };
+}
+
+async function loadPronunciation(word) {
+  if (word.pronunciation) return word.pronunciation;
+  const localFixed = localWordPronunciation(word);
+  if (localFixed) {
+    word.pronunciation = buildPronunciation([localFixed]);
+    word.pronunciation.tokens = [];
+    word.pronunciation.localFixed = true;
+    word.pronunciation.speakText = localFixed.speak;
+    return word.pronunciation;
+  }
+  const tokens = lookupTokens(word);
+  const results = await Promise.all(tokens.map(fetchTokenPronunciation));
+  word.pronunciation = buildPronunciation(results);
+  word.pronunciation.tokens = tokens;
   return word.pronunciation;
+}
+
+async function loadMerriamFallbackAudio(word) {
+  const current = await loadPronunciation(word);
+  if (current.audioUrls.length) return current;
+  if (current.localFixed) return current;
+
+  const tokens = current.tokens || lookupTokens(word);
+  const mwResults = await Promise.all(tokens.map(fetchTokenMerriamFallback));
+  const merged = buildPronunciation([...tokens.map((token) => pronunciationCache.get(`light:${token}`) || {}), ...mwResults]);
+  merged.tokens = tokens;
+  word.pronunciation = merged;
+  return merged;
 }
 
 function updatePronunciationCard(card, pronunciation) {
@@ -407,17 +547,28 @@ function updatePronunciationCard(card, pronunciation) {
   const ipaValue = card.querySelector(".ipa-value");
   const audioStatus = card.querySelector(".audio-status");
   const speakButton = card.querySelector('[data-action="speak"]');
-  if (ipaValue) ipaValue.textContent = pronunciation.ipa || "暂无 IPA";
+  if (ipaValue) ipaValue.textContent = pronunciation.ipa || "暂无音标";
   if (audioStatus) {
-    audioStatus.textContent = pronunciation.audioUrls.length ? "真人音频已就绪" : pronunciation.ipa ? "IPA 已补齐，暂无真人音频" : "暂无 IPA / 真人音频";
+    audioStatus.classList.remove("ready", "loading", "synth", "missing");
+    audioStatus.textContent = pronunciation.audioUrls.length ? "免费真人音频已就绪" : pronunciation.localFixed ? "本地固定读法已就绪" : pronunciation.ipa ? "音标已就绪，点听时先查 MW，失败后浏览器合成" : "点听时查 MW，失败后浏览器合成";
     audioStatus.classList.toggle("ready", Boolean(pronunciation.audioUrls.length));
+    audioStatus.classList.toggle("missing", !pronunciation.audioUrls.length && !pronunciation.ipa);
   }
   if (speakButton) {
-    speakButton.disabled = !pronunciation.audioUrls.length;
-    speakButton.classList.toggle("disabled", !pronunciation.audioUrls.length);
-    speakButton.textContent = pronunciation.audioUrls.length ? "听" : "无";
-    speakButton.title = pronunciation.audioUrls.length ? "播放真人朗读" : "暂未找到真人音频";
+    speakButton.disabled = false;
+    speakButton.classList.toggle("needs-fallback", !pronunciation.audioUrls.length);
+    speakButton.textContent = pronunciation.audioUrls.length ? "听" : pronunciation.localFixed ? "读" : "补";
+    speakButton.title = pronunciation.audioUrls.length ? "播放免费真人朗读" : pronunciation.localFixed ? "按本地固定读法朗读" : "点击后用 Merriam-Webster 查音频，失败后浏览器合成";
   }
+}
+
+function setPronunciationStatus(card, text, stateName = "") {
+  if (!card) return;
+  const audioStatus = card.querySelector(".audio-status");
+  if (!audioStatus) return;
+  audioStatus.textContent = text;
+  audioStatus.classList.remove("ready", "loading", "synth", "missing");
+  if (stateName) audioStatus.classList.add(stateName);
 }
 
 async function hydratePronunciationCard(card) {
@@ -460,6 +611,22 @@ function playAudio(url) {
   });
 }
 
+function speakWithBrowserSynthesis(word) {
+  return new Promise((resolve, reject) => {
+    if (!("speechSynthesis" in window)) {
+      reject(new Error("speech synthesis unavailable"));
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(word.speakText || word.say || word.term);
+    utterance.lang = "en-US";
+    utterance.rate = 0.82;
+    utterance.pitch = 1;
+    utterance.addEventListener("end", resolve, { once: true });
+    utterance.addEventListener("error", reject, { once: true });
+    window.speechSynthesis.speak(utterance);
+  });
+}
 async function playAudioSequence(urls) {
   for (const url of urls) {
     await playAudio(url);
@@ -493,8 +660,44 @@ function normalize(value) {
   return String(value || "").toLowerCase().trim();
 }
 
+const DISPLAY_CATEGORY_OVERRIDES = {
+  Frontend: "后端与工程",
+  Backend: "后端与工程",
+  HTML: "后端与工程",
+  CSS: "后端与工程",
+  JavaScript: "后端与工程",
+  DOM: "后端与工程",
+  Responsive: "后端与工程",
+  Accessibility: "后端与工程",
+  Search: "后端与工程",
+  Filter: "后端与工程",
+  Card: "后端与工程",
+  Badge: "后端与工程",
+  Button: "后端与工程",
+  "Local Storage": "后端与工程",
+  "Speech Synthesis": "后端与工程",
+  Utterance: "后端与工程",
+};
+
+const DISPLAY_CATEGORY_MAP = {
+  "RAG 主链路": "RAG 与检索",
+  "检索与向量库": "RAG 与检索",
+  "检索与评测": "RAG 与检索",
+  "LLM 与提示词": "AI 与提示词",
+  "后端与 API": "后端与工程",
+  "工程工具": "后端与工程",
+  "前端页面": "后端与工程",
+  "观测与运维": "后端与工程",
+  "数据与治理": "数据与文档",
+  "场景与业务": "业务场景",
+};
+
+function displayCategory(word) {
+  return DISPLAY_CATEGORY_OVERRIDES[word.term] || DISPLAY_CATEGORY_MAP[word.category] || word.category;
+}
+
 function categories() {
-  return ["全部", ...Array.from(new Set(WORDS.map((word) => word.category))).sort((a, b) => a.localeCompare(b, "zh-CN"))];
+  return ["全部", ...Array.from(new Set(WORDS.map(displayCategory))).sort((a, b) => a.localeCompare(b, "zh-CN"))];
 }
 
 function saveFavorites() {
@@ -504,11 +707,11 @@ function saveFavorites() {
 function filteredWords() {
   const query = normalize(state.query);
   return WORDS
-    .filter((word) => state.category === "全部" || word.category === state.category)
+    .filter((word) => state.category === "全部" || displayCategory(word) === state.category)
     .filter((word) => !state.favoritesOnly || state.favorites.has(word.term))
     .filter((word) => {
       if (!query) return true;
-      return [word.term, word.say, word.category, word.chinese, word.meaning, word.usage]
+      return [word.term, word.say, word.category, displayCategory(word), word.chinese, word.meaning, word.usage]
         .map(normalize)
         .some((value) => value.includes(query));
     })
@@ -518,25 +721,60 @@ function filteredWords() {
 async function speak(word, button = null) {
   if (button) {
     button.disabled = true;
-    button.textContent = "...";
+    button.textContent = "播...";
   }
-  const pronunciation = await loadPronunciation(word);
   const card = document.querySelector(`[data-term="${CSS.escape(word.term)}"]`);
-  updatePronunciationCard(card, pronunciation);
-
-  if (!pronunciation.audioUrls.length) {
-    alert(`暂时没有找到「${word.term}」的真人词典音频。`);
-    return;
-  }
+  let pronunciation = { ipa: "", audioUrls: [] };
 
   try {
-    await playAudioSequence(pronunciation.audioUrls);
+    pronunciation = await loadPronunciation(word);
+    updatePronunciationCard(card, pronunciation);
+
+    if (!pronunciation.audioUrls.length) {
+      if (pronunciation.localFixed) {
+        setPronunciationStatus(card, "正在按本地固定读法朗读...", "loading");
+        if (button) button.textContent = "读...";
+        await speakWithBrowserSynthesis({ ...word, speakText: pronunciation.speakText });
+        setPronunciationStatus(card, "已按本地固定读法朗读", "synth");
+        return;
+      }
+      const canUseMerriamWebster = hasMerriamWebsterKey();
+      setPronunciationStatus(
+        card,
+        canUseMerriamWebster ? "正在用 Merriam-Webster 查真人音频..." : "未配置 Merriam-Webster key，正在用浏览器合成...",
+        "loading"
+      );
+      if (button) button.textContent = canUseMerriamWebster ? "查..." : "合...";
+      if (canUseMerriamWebster) {
+        pronunciation = await loadMerriamFallbackAudio(word);
+        updatePronunciationCard(card, pronunciation);
+      }
+    }
+
+    if (pronunciation.audioUrls.length) {
+      await playAudioSequence(pronunciation.audioUrls);
+      setPronunciationStatus(card, "真人音频已播放", "ready");
+    } else {
+      setPronunciationStatus(card, hasMerriamWebsterKey() ? "Merriam-Webster 没查到，正在用浏览器合成..." : "正在用浏览器合成...", "loading");
+      if (button) button.textContent = "合...";
+      await speakWithBrowserSynthesis(word);
+      setPronunciationStatus(card, "已使用浏览器合成兜底", "synth");
+    }
   } catch (error) {
-    alert("真人音频播放失败，可能是网络或浏览器拦截了外部音频。");
+    try {
+      setPronunciationStatus(card, "真人音频播放失败，正在用浏览器合成...", "loading");
+      if (button) button.textContent = "合...";
+      await speakWithBrowserSynthesis(word);
+      pronunciation = { ...pronunciation, audioUrls: [] };
+      setPronunciationStatus(card, "已使用浏览器合成兜底", "synth");
+    } catch (fallbackError) {
+      setPronunciationStatus(card, "真人音频和浏览器合成都不可用", "missing");
+      alert("真人音频和浏览器合成都不可用，建议换 Chrome 或 Edge 再试。");
+    }
   } finally {
     if (button) {
       button.disabled = false;
-      button.textContent = "听";
+      button.textContent = pronunciation.audioUrls.length ? "听" : pronunciation.localFixed ? "读" : "补";
     }
   }
 }
@@ -564,13 +802,14 @@ function renderWords() {
   els.emptyState.style.display = words.length ? "none" : "grid";
   els.wordGrid.innerHTML = words.map((word) => {
     const favorite = state.favorites.has(word.term);
+    const category = displayCategory(word);
     return `
       <article class="word-card" data-term="${escapeHtml(word.term)}">
         <div class="word-top">
           <div>
             <div class="term">${escapeHtml(word.term)}</div>
                         <div class="pronounce">
-              <span class="ipa-label">美式 IPA：</span><span class="ipa-value">加载中...</span>
+              <span class="ipa-label">音标：</span><span class="ipa-value">加载中...</span>
               <span class="audio-status">正在查找真人音频</span>
             </div>
           </div>
@@ -580,11 +819,17 @@ function renderWords() {
           </div>
         </div>
         <div class="meta">
-          <span class="category">${escapeHtml(word.category)}</span>
-          <span class="zh">${escapeHtml(word.chinese)}</span>
+          <span class="category">${escapeHtml(category)}</span>
         </div>
-        <p class="meaning">${escapeHtml(word.meaning)}</p>
-        <p class="usage"><b>项目语境：</b>${escapeHtml(word.usage)}</p>
+        <div class="definition-block">
+          <span>基础释义</span>
+          <p>${escapeHtml(word.chinese)}</p>
+        </div>
+        <div class="definition-block project-meaning">
+          <span>项目里的意思</span>
+          <p>${escapeHtml(word.meaning)}</p>
+        </div>
+        <p class="usage"><b>项目例子：</b>${escapeHtml(word.usage)}</p>
       </article>
     `;
   }).join("");
